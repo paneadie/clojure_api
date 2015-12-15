@@ -2,8 +2,8 @@
   (:require [ring.adapter.jetty :as jetty]
             [compojure.core :refer :all]
             [compojure.route :as route]
-            [hiccup.core :as hiccup]
             [clj-http.client :as client]
+            [hiccup.core :as hiccup]
             )
   (use hiccup.core)
   (use ring.middleware.reload)
@@ -33,9 +33,12 @@
    contents])
 
 
+
+
+
 (defn view-layout [& content]
   (html
-    (doctype :xhtml-strict)
+    (doctype :html5)
     (xhtml-tag "en"
                [:head
                 [:meta {:http-equiv "Content-type"
@@ -45,12 +48,13 @@
 
 (defn view-input [& [a b]]
   (view-layout
-    [:h2 "Stupedia - Cuz visting websites directly is so last year."]
+    [:h2 "Stupedia -  last year."]
     [:form {:method "post" :action "/"}
      (if (and a b)
        [:p "those are not both numbers!"])
-     [:input {:type "text" :name "a" :value a}] [:span.math " + "]
-     [:input {:type "text" :name "b" :value b}] [:br]
+     [:input {:type "text" :name "a" :value a}]
+     [:input {:type "text" :name "b" :value b}]
+     [:br]
      [:input.action {:type "submit" :value "Go stoogle"}]]))
 
 
@@ -61,28 +65,32 @@
     [:a.action {:href "/"} "add more numbers"]))
 
 
-(defn view-wiki [a b]
-  (view-layout
-    (client/post (clojure.string/join [a b]) )
-    ))
+(defn results-raw [a]
+   (clojure.walk/keywordize-keys (client/get a  ))
+  )
 
-;
-;
-(defn parse-input [a b]
-  [(Integer/parseInt a) (Integer/parseInt b)])
+(defn findMyVal [myMap]
+  (doseq [[k v] myMap] (if (map? v) (findMyVal v) (println v) ) ) )
+
+(defn view-wiki [a b ]
+  (view-layout
+    ( findMyVal (results-raw a) ) )
+    )
+
+(defn OLD-view-wiki [a b ]
+  (view-layout
+   (get-in (results-raw a) [(keyword b)] (results-raw a) )
+) )
+
+
 
 (defroutes handler
            (GET "/" []
              (view-input))
 
            (POST "/" [a b]
-             (try
-               (let [[a b] (parse-input a b)
-                     sum (+ a b)]
-                 (view-output a b sum))
-               (catch NumberFormatException e
-                 (view-wiki a b))))
-           )
+                 (view-wiki a b)))
+
 
 
 (def app
